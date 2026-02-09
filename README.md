@@ -63,8 +63,16 @@ codec.train()
 
 optimizer = torch.optim.AdamW(codec.parameters(), lr=3e-4)
 
+# Initialize compressed memories (critical for compressive transformers!)
+compressed_memories = None
+
 for batch in loader:
-    logits, _ = codec(batch)
+    # Maintain memory state across batches - this is the key to compressive transformers
+    logits, compressed_memories = codec(batch, compressed_memories=compressed_memories)
+    
+    # Detach memories to prevent backprop through entire history
+    compressed_memories = [m.detach() if m is not None else None 
+                          for m in compressed_memories]
     
     loss = F.cross_entropy(
         logits[:, :-1].reshape(-1, 256),

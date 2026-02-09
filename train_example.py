@@ -1,4 +1,15 @@
-"""Train a Vortex-Codec model on binary data."""
+"""Train a Vortex-Codec model on binary data.
+
+This training script implements proper Compressive Transformer training by maintaining
+memory state across batches. Based on "Compressive Transformers for Long-Range Sequence
+Modelling" (Rae et al., 2019) - https://arxiv.org/abs/1911.05507
+
+Key implementation details:
+    - Memory state persists across batches within an epoch
+    - Old activations are compressed 4:1 using learnable Conv1D
+    - Memory is detached to prevent backprop through entire sequence history
+    - This enables modeling of long-range dependencies beyond the 512-token window
+"""
 
 import torch
 import torch.nn.functional as F
@@ -15,7 +26,7 @@ from vortex.utils.metrics import compute_bpd, cross_entropy_loss
 
 
 def train_epoch(model, loader, optimizer, device, grad_clip=1.0, log_interval=100):
-    """Train for one epoch with progress bar."""
+    """Train for one epoch with progress bar and proper compressive memory management."""
     model.train()
     total_loss = 0
     total_bpd = 0
@@ -23,10 +34,19 @@ def train_epoch(model, loader, optimizer, device, grad_clip=1.0, log_interval=10
     
     pbar = tqdm(loader, desc="Training", leave=False)
     
+    # Initialize compressed memories for all layers (proper compressive transformer usage)
+    compressed_memories = None
+    
     for batch_idx, batch in enumerate(pbar):
         batch = batch.to(device)
         
-        logits, _ = model(batch)
+        # Forward pass WITH memory state - this is critical for compressive transformers!
+        logits, compressed_memories = model(batch, compressed_memories=compressed_memories)
+        
+        # Detach memories to prevent backprop through entire sequence history
+        if compressed_memories is not None:
+            compressed_memories = [mem.detach() if mem is not None else None 
+                                   for mem in compressed_memories]
         
         loss = cross_entropy_loss(
             logits[:, :-1],
@@ -55,17 +75,21 @@ def train_epoch(model, loader, optimizer, device, grad_clip=1.0, log_interval=10
 
 
 def evaluate(model, loader, device):
-    """Evaluate model on validation set."""
+    """Evaluate model on validation set with proper memory management."""
     model.eval()
     total_loss = 0
     total_bpd = 0
     num_batches = 0
     
     with torch.no_grad():
+        # Initialize compressed memories for evaluation
+        compressed_memories = None
+        
         for batch in tqdm(loader, desc="Evaluating", leave=False):
             batch = batch.to(device)
             
-            logits, _ = model(batch)
+            # Use memory state during evaluation too
+            logits, compressed_memories = model(batch, compressed_memories=compressed_memories)
             
             loss = cross_entropy_loss(
                 logits[:, :-1],

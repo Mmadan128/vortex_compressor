@@ -123,10 +123,15 @@ def test_compression(data_path: str, model_path: str, max_bytes: int = None):
     total_bpd = 0
     num_batches = 0
     
+    # Initialize compressed memories for proper compressive transformer usage
+    compressed_memories = None
+    
     with torch.no_grad():
         for batch in loader:
             batch = batch.to(device)
-            logits, _ = model(batch)
+            
+            # Maintain memory state across batches
+            logits, compressed_memories = model(batch, compressed_memories=compressed_memories)
             bpd = compute_bpd(logits[:, :-1], batch[:, 1:])
             total_bpd += bpd
             num_batches += 1

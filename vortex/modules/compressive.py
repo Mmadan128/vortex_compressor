@@ -1,11 +1,20 @@
 """
 Compressive Transformer components for long-sequence modeling.
 
+Based on "Compressive Transformers for Long-Range Sequence Modelling"
+(Rae et al., 2019) - https://arxiv.org/abs/1911.05507
+
 This module implements the core compressive attention mechanism that maintains
 both recent activations and compressed long-term memory. When the local attention
 window fills, older activations are compressed and moved to a separate memory buffer,
 enabling the model to capture patterns across very long byte sequences without
 quadratic memory growth.
+
+Key implementation notes:
+    - Memory state must persist across forward passes (batches/chunks)
+    - Old activations are compressed using learnable Conv1D with stride
+    - Compressed memory is concatenated with recent context for attention
+    - Memory should be detached between batches to prevent backprop through entire history
 """
 
 import torch
