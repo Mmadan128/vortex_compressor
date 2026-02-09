@@ -1,0 +1,45 @@
+# Vortex-Codec Configuration
+# Defines hyperparameters for Compressive Transformer and compression pipeline
+
+model:
+  d_model: 256
+  n_layers: 6
+  n_heads: 8
+  d_ff: 1024
+  dropout: 0.1
+  vocab_size: 256
+
+compressive_memory:
+  window_size: 512
+  compression_rate: 4
+
+training:
+  batch_size: 32
+  learning_rate: 0.0003
+  warmup_steps: 4000
+  max_steps: 100000
+  grad_clip: 1.0
+  weight_decay: 0.01
+
+dataset:
+  window_size: 512
+  stride: 256
+  max_bytes: null
+
+evaluation:
+  eval_interval: 1000
+  eval_batches: 100
+  
+compression:
+  use_arithmetic_coding: true
+  quantize_probabilities: false
+  
+logging:
+  log_interval: 100
+  save_interval: 5000
+  checkpoint_dir: "checkpoints"
+  
+hardware:
+  device: "cuda"
+  mixed_precision: true
+  compile_model: false

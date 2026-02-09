@@ -1,0 +1,89 @@
+# Ablation Study Configuration
+# Tests architectural variations to measure impact on compression performance
+
+study_name: "memory_compression_ablation"
+
+variants:
+  - name: "baseline_no_compression"
+    model:
+      d_model: 256
+      n_layers: 6
+      n_heads: 8
+      d_ff: 1024
+      dropout: 0.1
+    compressive_memory:
+      window_size: 512
+      compression_rate: 1
+      max_compressed_len: 0
+  
+  - name: "2x_compression"
+    model:
+      d_model: 256
+      n_layers: 6
+      n_heads: 8
+      d_ff: 1024
+      dropout: 0.1
+    compressive_memory:
+      window_size: 512
+      compression_rate: 2
+      max_compressed_len: 512
+  
+  - name: "4x_compression_default"
+    model:
+      d_model: 256
+      n_layers: 6
+      n_heads: 8
+      d_ff: 1024
+      dropout: 0.1
+    compressive_memory:
+      window_size: 512
+      compression_rate: 4
+      max_compressed_len: 512
+  
+  - name: "8x_compression"
+    model:
+      d_model: 256
+      n_layers: 6
+      n_heads: 8
+      d_ff: 1024
+      dropout: 0.1
+    compressive_memory:
+      window_size: 512
+      compression_rate: 8
+      max_compressed_len: 512
+  
+  - name: "larger_model"
+    model:
+      d_model: 512
+      n_layers: 8
+      n_heads: 8
+      d_ff: 2048
+      dropout: 0.1
+    compressive_memory:
+      window_size: 512
+      compression_rate: 4
+      max_compressed_len: 1024
+  
+  - name: "deeper_model"
+    model:
+      d_model: 256
+      n_layers: 12
+      n_heads: 8
+      d_ff: 1024
+      dropout: 0.1
+    compressive_memory:
+      window_size: 512
+      compression_rate: 4
+      max_compressed_len: 512
+
+training:
+  batch_size: 32
+  learning_rate: 0.0003
+  max_steps: 50000
+  eval_interval: 1000
+
+metrics:
+  - bits_per_dimension
+  - compression_ratio
+  - throughput_mbps
+  - memory_usage_mb
