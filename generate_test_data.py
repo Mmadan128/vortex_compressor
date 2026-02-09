@@ -1,12 +1,4 @@
-"""
-Generate test binary datasets for compression benchmarking.
-
-Creates various types of structured binary data that simulate:
-- High-energy detector event data (ATLAS-like)
-- Time-series sensor telemetry
-- Network packet captures
-- Industrial control system logs
-"""
+"""Generate fake binary test data."""
 
 import numpy as np
 import struct
@@ -17,17 +9,7 @@ import json
 
 
 def generate_atlas_style_events(num_events: int = 10000, output_file: str = "atlas_events.bin"):
-    """
-    Generates ATLAS-like detector event data with realistic structure.
-    
-    Each event contains:
-    - Event header (run number, event number, timestamp, trigger bits)
-    - Track data (momentum, charge, detector hits)
-    - Calorimeter energy deposits
-    - Muon system hits
-    
-    This simulates the binary format of high-energy detector readout.
-    """
+    """Make fake ATLAS detector events."""
     print(f"Generating {num_events} ATLAS-style detector events...")
     
     with open(output_file, "wb") as f:

@@ -1,9 +1,4 @@
-"""
-CLI entry point for Vortex compression.
-
-Usage:
-    python -m bin.compress input.dat -o output.vortex --model weights.pt
-"""
+"""Compress files with Vortex."""
 
 import argparse
 import sys

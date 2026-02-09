@@ -1,10 +1,4 @@
-"""
-High-level compression and decompression interface using arithmetic coding.
-
-This module provides the VortexCodec class that orchestrates the complete
-compression pipeline: neural probability estimation via Compressive Transformer,
-conversion to CDFs, and lossless encoding via torchac arithmetic coder.
-"""
+"""Codec for compressing binary data with transformer + arithmetic coding."""
 
 import torch
 import torch.nn as nn
@@ -30,29 +24,8 @@ from vortex.modules.compressive import CompressiveTransformerBlock
 
 class VortexCodec(nn.Module):
     """
-    Neural lossless codec using Compressive Transformer for probability estimation.
-    
-    This codec predicts a probability distribution over the next byte (0-255) given
-    previous context. The predicted distribution is converted to a cumulative
-    distribution function (CDF) and passed to an arithmetic coder for lossless
-    compression. The compressive architecture allows modeling of very long-range
-    dependencies in structured binary data.
-    
-    Args:
-        d_model: Transformer hidden dimension
-        n_layers: Number of transformer blocks
-        n_heads: Number of attention heads per block
-        d_ff: Feed-forward network hidden dimension
-        window_size: Size of recent context window
-        compression_rate: Ratio for compressing old activations
-        vocab_size: Output vocabulary size (256 for bytes)
-        max_seq_len: Maximum sequence length supported
-        dropout: Dropout probability
-        
-    Example:
-        >>> codec = VortexCodec(d_model=256, n_layers=6)
-        >>> compressed = codec.compress(input_bytes)
-        >>> decompressed = codec.decompress(compressed, target_length=len(input_bytes))
+    Main codec class. Predicts next byte probabilities with a transformer,
+    then uses arithmetic coding to compress.
     """
     
     def __init__(
@@ -182,26 +155,10 @@ class VortexCodec(nn.Module):
         show_progress: bool = False
     ) -> bytes:
         """
-        Compresses input byte sequence using neural probability estimation.
-        
-        Uses chunk-based processing for efficiency. Each chunk is compressed
-        independently with arithmetic coding based on predicted CDFs.
-        
-        Args:
-            data: Input data as tensor, numpy array, or raw bytes
-            chunk_size: Size of chunks to process at once
-            show_progress: Whether to show progress bar
-            
-        Returns:
-            Compressed byte string (header + compressed chunks)
-            
-        Raises:
-            RuntimeError: If torchac is not available
+        Compress data to bytes. Returns header + compressed chunks.
         """
         if not TORCHAC_AVAILABLE:
-            raise RuntimeError(
-                "torchac is required for compression. Install with: pip install torchac"
-            )
+            raise RuntimeError("Need torchac for compression: pip install torchac")
         
         self.eval()
         

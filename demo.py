@@ -1,8 +1,5 @@
-"""
-Inference demo script for Vortex-Codec.
 
-Demonstrates compression and decompression on a sample binary file.
-"""
+"""Quick demo of compression."""
 
 import torch
 import numpy as np
@@ -14,10 +11,7 @@ from vortex.utils.metrics import evaluate_compression_performance
 
 
 def create_sample_data(size_bytes=10000):
-    """
-    Creates synthetic structured binary data for demonstration.
-    Simulates repeating patterns commonly found in telemetry data.
-    """
+    """Make some fake data with patterns.\"\"\"
     base_pattern = np.array([i % 256 for i in range(100)], dtype=np.uint8)
     
     noise = np.random.randint(0, 50, size=100, dtype=np.int32)

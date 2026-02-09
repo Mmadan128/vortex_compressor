@@ -1,10 +1,4 @@
-"""
-Training script for Vortex-Codec on binary data.
-
-Trains the compressive transformer on structured binary datasets.
-Supports various data formats including detector events, sensor telemetry,
-network captures, and system logs.
-"""
+"""Train a Vortex-Codec model on binary data."""
 
 import torch
 import torch.nn.functional as F

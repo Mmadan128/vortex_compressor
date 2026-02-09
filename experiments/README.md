@@ -1,21 +1,15 @@
-# Benchmark Scripts
+# Experiments
 
-This directory will contain scripts for benchmarking Vortex-Codec against
-standard compression algorithms:
+## atlas_experiment/
 
-- `benchmark_gzip.py` - Compare against Gzip
-- `benchmark_zstd.py` - Compare against Zstandard
-- `benchmark_brotli.py` - Compare against Brotli
-- `ablation_studies.py` - Test architectural variations
-
-## Running Benchmarks
+Real ATLAS particle physics data. Download and extract with `download.py`.
 
 ```bash
-python experiments/benchmark_gzip.py --data industrial_logs.bin --model weights.pt
+cd atlas_experiment
+python download.py --all-steps  # downloads 2.8GB, creates atlas_200m.bin
 ```
 
-Results will include:
-- Compression ratio
-- Compression/decompression throughput (MB/s)
-- Bits-per-dimension (BPD)
-- Peak memory usage
+Then train:
+```bash
+python train_example.py --data experiments/atlas_experiment/atlas_200m.bin --epochs 10
+```
