@@ -6,10 +6,7 @@ Neural lossless compressor for binary data. Uses transformer + arithmetic coding
 
 Learns byte patterns in your data and compresses better than standard codecs. Especially good for repetitive binary formats like sensor logs, telemetry, network captures.
 
-**Results on ATLAS detector data:**
-- Gzip: 7.3 bits/byte
-- Zstd: 7.3 bits/byte  
-- Vortex: 5.9 bits/byte (23% better)
+
 
 ## How it works
 
