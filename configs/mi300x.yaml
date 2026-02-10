@@ -1,0 +1,45 @@
+# Vortex-Codec — MI300X optimized config for ATLAS 200MB
+# Larger model + bigger batches to utilize 192GB HBM3
+
+model:
+  d_model: 512
+  n_layers: 8
+  n_heads: 8
+  d_ff: 2048
+  dropout: 0.1
+  vocab_size: 256
+
+compressive_memory:
+  window_size: 512
+  compression_rate: 4
+
+training:
+  batch_size: 256
+  learning_rate: 0.001
+  warmup_steps: 2000
+  max_steps: 100000
+  grad_clip: 1.0
+  weight_decay: 0.01
+
+dataset:
+  window_size: 512
+  stride: 256
+  max_bytes: null
+
+evaluation:
+  eval_interval: 1000
+  eval_batches: 100
+
+compression:
+  use_arithmetic_coding: true
+  quantize_probabilities: false
+
+logging:
+  log_interval: 50
+  save_interval: 1
+  checkpoint_dir: "checkpoints"
+
+hardware:
+  device: "cuda"
+  mixed_precision: true
+  compile_model: false
