@@ -126,8 +126,6 @@ The model learns patterns specific to your data type, so it compresses better th
 - [x] Compressive transformer
 - [x] Arithmetic coding with torchac
 - [x] Training pipeline
-- [ ] Decompression (currently compression-only)
-- [ ] Faster inference
 - [ ] More benchmarks
 
 ## License
