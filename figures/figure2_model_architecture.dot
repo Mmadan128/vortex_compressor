@@ -1,0 +1,60 @@
+digraph model_architecture {
+    label="Vortex-Codec Model Architecture (14.8M Parameters)";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    compound=true;
+    
+    // Input
+    input [label="Input Bytes\n[0-255]\n512 tokens", fillcolor="#E1F5FF"];
+    
+    // Embedding Layer
+    subgraph cluster_embedding {
+        label="Embedding Layer (131K params)";
+        style=filled;
+        fillcolor="#FFEEEE";
+        
+        byte_emb [label="Byte Embedding\n256 → 512 dim\n131,072 params", fillcolor="#FFCCCC"];
+        pos_enc [label="Positional Encoding\nSinusoidal\nmax_len=8192\n(fixed)", fillcolor="#FFCCCC"];
+    }
+    
+    // Transformer Layers
+    subgraph cluster_transformers {
+        label="8 Transformer Blocks (14.7M params)";
+        style=filled;
+        fillcolor="#EEFFEE";
+        
+        layer1 [label="Layer 1\nCompressive Attention\n+ Feed-Forward\n1.84M params", fillcolor="#CCFFCC"];
+        layer2 [label="Layer 2\nCompressive Attention\n+ Feed-Forward\n1.84M params", fillcolor="#CCFFCC"];
+        dots [label="...\n(Layers 3-7)", shape=plaintext];
+        layer8 [label="Layer 8\nCompressive Attention\n+ Feed-Forward\n1.84M params", fillcolor="#CCFFCC"];
+    }
+    
+    // Output Layer
+    subgraph cluster_output {
+        label="Output Layer (131K params)";
+        style=filled;
+        fillcolor="#EEEEFF";
+        
+        projection [label="Linear Projection\n512 → 256\n131,328 params", fillcolor="#CCCCFF"];
+        softmax [label="Softmax\nProbability Dist", fillcolor="#CCCCFF"];
+    }
+    
+    // Arithmetic Coding
+    arithmetic [label="Arithmetic Coding\n(torchac)", fillcolor="#FFFFCC"];
+    output [label="Compressed\n3.04 BPD", fillcolor="#CCFFCC", style="rounded,filled,bold"];
+    
+    // Connections
+    input -> byte_emb;
+    byte_emb -> pos_enc;
+    pos_enc -> layer1;
+    layer1 -> layer2;
+    layer2 -> dots [style=dotted];
+    dots -> layer8 [style=dotted];
+    layer8 -> projection;
+    projection -> softmax;
+    softmax -> arithmetic;
+    arithmetic -> output;
+}

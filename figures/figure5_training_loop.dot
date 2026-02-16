@@ -1,0 +1,46 @@
+digraph training_loop {
+    label="Training Loop with Compressive Memory Management";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    start [label="Start Epoch\ncompressed_memories = None", shape=ellipse, fillcolor="#E1FFE1"];
+    
+    load_batch [label="Load Batch\n32 × 512 bytes\nfrom DataLoader", fillcolor="#E1F5FF"];
+    
+    forward [label="Forward Pass\nlogits, memories = model(\n  batch,\n  compressed_memories\n)", fillcolor="#CCFFCC"];
+    
+    update_mem [label="Updated Memories\n8 layers × memory states\n[batch, mem_len, 512]", fillcolor="#FFFFCC"];
+    
+    loss [label="Compute Loss\nCross-Entropy\nBPD = -Σ log₂ p(x_i|x_{<i}) / N", fillcolor="#CCCCFF"];
+    
+    backward [label="Backward Pass\nloss.backward()\nCompute gradients", fillcolor="#FFCCCC"];
+    
+    clip [label="Gradient Clipping\nmax_norm=1.0", fillcolor="#FFDDCC"];
+    
+    optimize [label="Optimizer Step\nAdamW\nUpdate 14.8M params\nzero_grad()", fillcolor="#FFE1CC"];
+    
+    detach [label="★ DETACH MEMORIES ★\ncompressed_memories = [\n  m.detach() for m in memories\n]\nBreaks gradient flow\nPreserves activations", fillcolor="#FF9999", style="rounded,filled,bold", penwidth=3];
+    
+    check [label="More\nbatches?", shape=diamond, fillcolor="#FFFFEE"];
+    
+    end_epoch [label="End Epoch\nSave checkpoint", shape=ellipse, fillcolor="#FFE1E1"];
+    
+    // Main flow
+    start -> load_batch;
+    load_batch -> forward;
+    forward -> update_mem;
+    update_mem -> loss;
+    loss -> backward;
+    backward -> clip;
+    clip -> optimize;
+    optimize -> detach;
+    detach -> check;
+    check -> load_batch [label="Yes\n(memory\npersists)", fontcolor=darkgreen];
+    check -> end_epoch [label="No"];
+    
+    // Memory persistence annotation
+    mem_note [label="Critical:\nMemory state persists\nacross batches but\ngradients do not flow\nthrough history", shape=note, fillcolor="#FFFFDD"];
+}

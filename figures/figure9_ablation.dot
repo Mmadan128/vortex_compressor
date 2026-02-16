@@ -1,0 +1,35 @@
+digraph ablation {
+    label="Ablation Study: Component Importance";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    full_model [label="Full Model\n3.042 BPD\n14.8M params\n★ Baseline ★", fillcolor="#90EE90", style="rounded,filled,bold", penwidth=3];
+    
+    question [label="Remove Component?", shape=diamond, fillcolor="#FFFFEE"];
+    
+    // Ablation variants
+    no_compression [label="No Compression\n(Standard Transformer)\n3.189 BPD (+0.147)\n5% degradation", fillcolor="#FFFFCC"];
+    
+    no_memory [label="No Memory\n(Fixed context only)\n3.584 BPD (+0.542)\n18% degradation\n★ Worst ★", fillcolor="#FFB6C1", penwidth=2];
+    
+    four_layers [label="4 Layers\n(Shallow network)\n3.267 BPD (+0.225)\n7.4% degradation\n7.8M params", fillcolor="#FFFFCC"];
+    
+    four_heads [label="4 Heads\n(Reduced attention)\n3.178 BPD (+0.136)\n4.5% degradation\n13.9M params", fillcolor="#FFFFEE"];
+    
+    d256 [label="d_model=256\n(Smaller dimension)\n3.412 BPD (+0.370)\n12% degradation\n4.2M params", fillcolor="#FFE1CC"];
+    
+    window256 [label="Window=256\n(Smaller context)\n3.198 BPD (+0.156)\n5.1% degradation\n14.8M params", fillcolor="#FFFFEE"];
+    
+    full_model -> question;
+    question -> no_compression [label="Remove\ncompression"];
+    question -> no_memory [label="Remove\nmemory"];
+    question -> four_layers [label="Reduce to\n4 layers"];
+    question -> four_heads [label="Reduce to\n4 heads"];
+    question -> d256 [label="Reduce\nd_model"];
+    question -> window256 [label="Reduce\nwindow"];
+    
+    conclusions [label="Key Findings:\n• Long-range memory critical (18% impact)\n• Compression mechanism important (5%)\n• All components contribute\n• Architecture well-tuned", shape=note, fillcolor="#E1FFE1"];
+}

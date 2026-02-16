@@ -1,0 +1,106 @@
+{
+  "ATLAS_10M": {
+    "baseline": {
+      "size_mb": 10.0,
+      "compression_ratio": "N/A",
+      "compression_time_s": "N/A",
+      "\u03c3_SSR": "N/A"
+    },
+    "LZMA(9)": {
+      "size_mb": 5.9213104248046875,
+      "compression_ratio": 1.688815360550844,
+      "compression_time_s": 2.5341745763338017,
+      "\u03c3_SSR": 0.027739110102336387
+    },
+    "ZLIB(9)": {
+      "size_mb": 6.197507858276367,
+      "compression_ratio": 1.6135518064161312,
+      "compression_time_s": 0.5046868426664636,
+      "\u03c3_SSR": 0.016559809593574785
+    },
+    "Gzip(6)": {
+      "size_mb": 6.269925117492676,
+      "compression_ratio": 1.5949153797867,
+      "compression_time_s": 0.14670932633331782,
+      "\u03c3_SSR": 0.02290599821715404
+    }
+  },
+  "ATLAS_25M": {
+    "baseline": {
+      "size_mb": 25.0,
+      "compression_ratio": "N/A",
+      "compression_time_s": "N/A",
+      "\u03c3_SSR": "N/A"
+    },
+    "LZMA(9)": {
+      "size_mb": 14.803817749023438,
+      "compression_ratio": 1.6887535650490682,
+      "compression_time_s": 7.284006916999108,
+      "\u03c3_SSR": 0.03041146160349903
+    },
+    "ZLIB(9)": {
+      "size_mb": 15.497088432312012,
+      "compression_ratio": 1.613206255432734,
+      "compression_time_s": 1.2588393546672403,
+      "\u03c3_SSR": 0.00582820939971895
+    },
+    "Gzip(6)": {
+      "size_mb": 15.677623748779297,
+      "compression_ratio": 1.5946294158224437,
+      "compression_time_s": 0.362793947665826,
+      "\u03c3_SSR": 0.01049063955133388
+    }
+  },
+  "ATLAS_50M": {
+    "baseline": {
+      "size_mb": 50.0,
+      "compression_ratio": "N/A",
+      "compression_time_s": "N/A",
+      "\u03c3_SSR": "N/A"
+    },
+    "LZMA(9)": {
+      "size_mb": 29.58523178100586,
+      "compression_ratio": 1.6900323908261794,
+      "compression_time_s": 15.936429548334369,
+      "\u03c3_SSR": 0.004317581593022078
+    },
+    "ZLIB(9)": {
+      "size_mb": 30.995830535888672,
+      "compression_ratio": 1.6131201886043112,
+      "compression_time_s": 2.548350451665707,
+      "\u03c3_SSR": 0.023664956986221793
+    },
+    "Gzip(6)": {
+      "size_mb": 31.356614112854004,
+      "compression_ratio": 1.5945599170895024,
+      "compression_time_s": 0.7496694816666908,
+      "\u03c3_SSR": 0.0026224788178362607
+    }
+  },
+  "ATLAS_Full": {
+    "baseline": {
+      "size_mb": 95.367431640625,
+      "compression_ratio": "N/A",
+      "compression_time_s": "N/A",
+      "\u03c3_SSR": "N/A"
+    },
+    "LZMA(9)": {
+      "size_mb": 56.370506286621094,
+      "compression_ratio": 1.6917966135645546,
+      "compression_time_s": 33.986788432668014,
+      "\u03c3_SSR": 0.0034256094526082747
+    },
+    "ZLIB(9)": {
+      "size_mb": 59.12348556518555,
+      "compression_ratio": 1.6130211324479395,
+      "compression_time_s": 4.772971965332545,
+      "\u03c3_SSR": 0.004456321015434659
+    },
+    "Gzip(6)": {
+      "size_mb": 59.812795639038086,
+      "compression_ratio": 1.5944319375431673,
+      "compression_time_s": 1.471498953000264,
+      "\u03c3_SSR": 0.009770203431454945
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "baseline": {
+    "size_mb": 10.0,
+    "compression_ratio": "N/A",
+    "compression_time_s": "N/A",
+    "\u03c3_SSR": "N/A"
+  },
+  "LZMA(9)": {
+    "size_mb": 5.9213104248046875,
+    "compression_ratio": 1.688815360550844,
+    "compression_time_s": 2.4308221963328833,
+    "\u03c3_SSR": 0.03297275404168529
+  },
+  "ZLIB(9)": {
+    "size_mb": 6.197507858276367,
+    "compression_ratio": 1.6135518064161312,
+    "compression_time_s": 0.487804652001311,
+    "\u03c3_SSR": 0.01024460858243395
+  },
+  "Gzip(6)": {
+    "size_mb": 6.269925117492676,
+    "compression_ratio": 1.5949153797867,
+    "compression_time_s": 0.14569831533299293,
+    "\u03c3_SSR": 0.0078101089404457955
+  },
+  "Vortex-Codec": {
+    "size_mb": 4.366054534912109,
+    "compression_ratio": 2.2903974103020004,
+    "compression_time_s": 202.03114856899992,
+    "\u03c3_SSR": "N/A"
+  }
+}

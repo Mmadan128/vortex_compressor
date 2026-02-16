@@ -1,0 +1,26 @@
+{
+  "baseline": {
+    "size_mb": 50.0,
+    "compression_ratio": "N/A",
+    "compression_time_s": "N/A",
+    "\u03c3_SSR": "N/A"
+  },
+  "LZMA(9)": {
+    "size_mb": 29.58523178100586,
+    "compression_ratio": 1.6900323908261794,
+    "compression_time_s": 15.936429548334369,
+    "\u03c3_SSR": 0.004317581593022078
+  },
+  "ZLIB(9)": {
+    "size_mb": 30.995830535888672,
+    "compression_ratio": 1.6131201886043112,
+    "compression_time_s": 2.548350451665707,
+    "\u03c3_SSR": 0.023664956986221793
+  },
+  "Gzip(6)": {
+    "size_mb": 31.356614112854004,
+    "compression_ratio": 1.5945599170895024,
+    "compression_time_s": 0.7496694816666908,
+    "\u03c3_SSR": 0.0026224788178362607
+  }
+}

@@ -1,0 +1,72 @@
+digraph data_flow {
+    label="Complete Data Flow: Training to Evaluation";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    // Data Source
+    subgraph cluster_data {
+        label="ATLAS Data";
+        style=filled;
+        fillcolor="#E1F5FF";
+        
+        raw_data [label="Raw Binary Files\nJet detector measurements\nFloat32, Int16, structured", fillcolor="#D0E8FF"];
+        train_data [label="Training: atlas_200m.bin\n200 MB", fillcolor="#C0DDFF"];
+        test_data [label="Test Sets:\natlas_10m/25m/50m/full", fillcolor="#C0DDFF"];
+    }
+    
+    // Preprocessing
+    preprocess [label="Preprocessing\nSliding windows: 512 bytes\nStride: 256 (training)\nNo normalization", fillcolor="#FFE1CC"];
+    
+    // DataLoader
+    dataloader [label="DataLoader\nBatch size: 32\nShuffle: True (train)\nNum workers: 2", fillcolor="#FFFFCC"];
+    
+    // Training
+    subgraph cluster_training {
+        label="Training Loop";
+        style=filled;
+        fillcolor="#EEFFEE";
+        
+        model_forward [label="Model Forward\n8-layer transformer\nCompressive attention", fillcolor="#CCFFCC"];
+        compute_loss [label="Loss & Metrics\nCross-entropy\nBPD computation", fillcolor="#BBFFBB"];
+        backprop [label="Backpropagation\nAdamW optimizer\nLR: 3e-4", fillcolor="#AAFFAA"];
+    }
+    
+    // Evaluation
+    subgraph cluster_eval {
+        label="Evaluation";
+        style=filled;
+        fillcolor="#EEEEFF";
+        
+        eval_model [label="Model Inference\nNo gradient computation\nMemory persistence", fillcolor="#CCCCFF"];
+        compute_bpd [label="Compute BPD\nOn test sets", fillcolor="#BBBBFF"];
+    }
+    
+    // Results
+    subgraph cluster_results {
+        label="Results";
+        style=filled;
+        fillcolor="#E1FFE1";
+        
+        results [label="Performance Metrics\natlas_10m: 3.044 BPD\natlas_25m: 3.043 BPD\natlas_50m: 3.042 BPD\natlas_full: 3.042 BPD", fillcolor="#CCFFCC"];
+        baseline [label="Baseline Comparison\nGzip: 5.02 BPD (39% worse)\nZstd: 4.98 BPD (39% worse)", fillcolor="#BBFFBB"];
+    }
+    
+    // Flow
+    raw_data -> train_data;
+    raw_data -> test_data;
+    train_data -> preprocess;
+    preprocess -> dataloader;
+    dataloader -> model_forward;
+    model_forward -> compute_loss;
+    compute_loss -> backprop;
+    backprop -> model_forward [label="50 epochs", style=dashed];
+    
+    test_data -> preprocess [style=dotted];
+    preprocess -> eval_model [style=dotted];
+    eval_model -> compute_bpd;
+    compute_bpd -> results;
+    results -> baseline;
+}

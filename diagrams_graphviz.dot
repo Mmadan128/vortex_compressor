@@ -1,0 +1,554 @@
+/* ============================================================================
+   Vortex-Codec GraphViz/DOT Diagrams
+   
+   To render these diagrams:
+   - Install GraphViz: sudo apt install graphviz (Linux) or brew install graphviz (Mac)
+   - Render individual diagrams:
+     dot -Tpng -o figure1.png figure1_compression_pipeline.dot
+     dot -Tsvg -o figure1.svg figure1_compression_pipeline.dot
+     dot -Tpdf -o figure1.pdf figure1_compression_pipeline.dot
+   
+   - Or use this file and specify which graph to render with -K option
+   ============================================================================ */
+
+/* ============================================================================
+   Figure 1: Compression Pipeline
+   ============================================================================ */
+
+digraph compression_pipeline {
+    label="Vortex-Codec Compression Pipeline";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    // Input
+    input [label="Input Binary Data\nATLAS Detector\nScientific Format", fillcolor="#E1F5FF"];
+    
+    // Preprocessing
+    window [label="Sliding Windows\n512 bytes\nStride 256", fillcolor="#D0E8FF"];
+    
+    // Model
+    transformer [label="Compressive Transformer\n8 Layers, d=512\n14.8M Parameters", fillcolor="#FFE1E1"];
+    
+    // Probability
+    prob [label="Probability Distribution\np(x_t | x_{<t})\n256 values", fillcolor="#FFD0D0"];
+    
+    // CDF
+    cdf [label="Convert to CDF\nCumulative Distribution\n256 values", fillcolor="#FFC0C0"];
+    
+    // Arithmetic Coding
+    arithmetic [label="Arithmetic Coding\ntorchac library\nEntropy encoding", fillcolor="#FFB0B0"];
+    
+    // Output
+    output [label="Compressed Bitstream\n3.04 BPD\n38% of original size\n39% better than Gzip", fillcolor="#E1FFE1"];
+    
+    // Connections
+    input -> window;
+    window -> transformer;
+    transformer -> prob;
+    prob -> cdf;
+    cdf -> arithmetic;
+    arithmetic -> output;
+}
+
+/* ============================================================================
+   Figure 2: Complete Model Architecture
+   ============================================================================ */
+
+digraph model_architecture {
+    label="Vortex-Codec Model Architecture (14.8M Parameters)";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    compound=true;
+    
+    // Input
+    input [label="Input Bytes\n[0-255]\n512 tokens", fillcolor="#E1F5FF"];
+    
+    // Embedding Layer
+    subgraph cluster_embedding {
+        label="Embedding Layer (131K params)";
+        style=filled;
+        fillcolor="#FFEEEE";
+        
+        byte_emb [label="Byte Embedding\n256 → 512 dim\n131,072 params", fillcolor="#FFCCCC"];
+        pos_enc [label="Positional Encoding\nSinusoidal\nmax_len=8192\n(fixed)", fillcolor="#FFCCCC"];
+    }
+    
+    // Transformer Layers
+    subgraph cluster_transformers {
+        label="8 Transformer Blocks (14.7M params)";
+        style=filled;
+        fillcolor="#EEFFEE";
+        
+        layer1 [label="Layer 1\nCompressive Attention\n+ Feed-Forward\n1.84M params", fillcolor="#CCFFCC"];
+        layer2 [label="Layer 2\nCompressive Attention\n+ Feed-Forward\n1.84M params", fillcolor="#CCFFCC"];
+        dots [label="...\n(Layers 3-7)", shape=plaintext];
+        layer8 [label="Layer 8\nCompressive Attention\n+ Feed-Forward\n1.84M params", fillcolor="#CCFFCC"];
+    }
+    
+    // Output Layer
+    subgraph cluster_output {
+        label="Output Layer (131K params)";
+        style=filled;
+        fillcolor="#EEEEFF";
+        
+        projection [label="Linear Projection\n512 → 256\n131,328 params", fillcolor="#CCCCFF"];
+        softmax [label="Softmax\nProbability Dist", fillcolor="#CCCCFF"];
+    }
+    
+    // Arithmetic Coding
+    arithmetic [label="Arithmetic Coding\n(torchac)", fillcolor="#FFFFCC"];
+    output [label="Compressed\n3.04 BPD", fillcolor="#CCFFCC", style="rounded,filled,bold"];
+    
+    // Connections
+    input -> byte_emb;
+    byte_emb -> pos_enc;
+    pos_enc -> layer1;
+    layer1 -> layer2;
+    layer2 -> dots [style=dotted];
+    dots -> layer8 [style=dotted];
+    layer8 -> projection;
+    projection -> softmax;
+    softmax -> arithmetic;
+    arithmetic -> output;
+}
+
+/* ============================================================================
+   Figure 3: Single Transformer Block Detail
+   ============================================================================ */
+
+digraph transformer_block {
+    label="Single Compressive Transformer Block (1.84M params)";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    input [label="Input\n[batch, 512, 512]", fillcolor="#E1F5FF"];
+    
+    // Pre-norm
+    ln1 [label="Layer Norm 1\n1,024 params", fillcolor="#FFE1CC"];
+    
+    // Attention
+    subgraph cluster_attention {
+        label="Compressive Multi-Head Attention";
+        style=filled;
+        fillcolor="#FFEEBB";
+        
+        mem_comp [label="Compressed Memory\nOld activations\n4:1 compressed", fillcolor="#FFE1E1"];
+        mem_recent [label="Recent Memory\nLast 512 tokens\nFull resolution", fillcolor="#E1FFE1"];
+        concat [label="Concatenate\nMemories", fillcolor="#FFFFCC"];
+        qkv [label="Q, K, V Projections\n8 heads, d_k=64\n786,432 params", fillcolor="#FFD0CC"];
+        attn [label="Scaled Dot-Product\nAttention\n+ Causal Mask", fillcolor="#FFCCAA"];
+        out_proj [label="Output Projection\n262,144 params", fillcolor="#FFD0CC"];
+        
+        mem_comp -> concat;
+        mem_recent -> concat;
+        concat -> qkv;
+        qkv -> attn;
+        attn -> out_proj;
+    }
+    
+    // First residual
+    residual1 [label="Residual Connection\n+ Dropout", fillcolor="#D0FFD0"];
+    
+    // Second norm
+    ln2 [label="Layer Norm 2\n1,024 params", fillcolor="#FFE1CC"];
+    
+    // Feed-forward
+    subgraph cluster_ffn {
+        label="Feed-Forward Network";
+        style=filled;
+        fillcolor="#CCDDFF";
+        
+        linear1 [label="Linear 512→2048\n+ GELU\n+ Dropout\n1,048,576 params", fillcolor="#CCCCFF"];
+        linear2 [label="Linear 2048→512\n+ Dropout\n1,048,576 params", fillcolor="#CCCCFF"];
+        
+        linear1 -> linear2;
+    }
+    
+    // Second residual
+    residual2 [label="Residual Connection\n+ Dropout", fillcolor="#D0FFD0"];
+    
+    output [label="Output\n[batch, 512, 512]", fillcolor="#E1FFE1"];
+    
+    // Memory compression
+    compress_layer [label="Memory Compression\nConv1D (stride=4)\n1,049,088 params", fillcolor="#FFFFEE", style="dashed"];
+    
+    // Flow
+    input -> ln1;
+    ln1 -> qkv [lhead=cluster_attention];
+    out_proj -> residual1 [ltail=cluster_attention];
+    input -> residual1 [style=dashed, color=blue, label="  residual"];
+    residual1 -> ln2;
+    ln2 -> linear1 [lhead=cluster_ffn];
+    linear2 -> residual2 [ltail=cluster_ffn];
+    residual1 -> residual2 [style=dashed, color=blue, label="  residual"];
+    residual2 -> output;
+    
+    mem_recent -> compress_layer [label="when full", style=dotted];
+    compress_layer -> mem_comp [label="compressed", style=dotted];
+}
+
+/* ============================================================================
+   Figure 4: Compressive Attention Memory Flow
+   ============================================================================ */
+
+digraph compressive_attention {
+    label="Compressive Attention Memory Mechanism";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    subgraph cluster_memory {
+        label="Memory Buffers";
+        style=filled;
+        fillcolor="#F5F5F5";
+        
+        compressed [label="Compressed Memory\nUp to 512 tokens\n(represents 2048 original)\n4:1 compression", fillcolor="#FFE1E1"];
+        recent [label="Recent Memory\n512 tokens\nFull resolution", fillcolor="#E1FFE1"];
+    }
+    
+    subgraph cluster_compress {
+        label="Compression Process";
+        style=filled;
+        fillcolor="#FFF8E1";
+        
+        old_tokens [label="Oldest 128 tokens\nfrom Recent Memory", fillcolor="#FFFFCC"];
+        conv1d [label="Conv1D Layer\nkernel_size=4\nstride=4\n512 in → 512 out", fillcolor="#FFE0B0"];
+        compressed_tokens [label="32 compressed tokens\n(4:1 ratio)", fillcolor="#FFCC99"];
+    }
+    
+    concatenate [label="Concatenate\nCompressed + Recent\nTotal context: up to 2560", fillcolor="#D0E0FF"];
+    
+    attention [label="Multi-Head Attention\n8 heads, d_k=64\nScaled dot-product\n+ Causal mask", fillcolor="#C0D0FF"];
+    
+    output_node [label="Attention Output\nContext-aware\nrepresentations", fillcolor="#E1FFE1"];
+    
+    // Compression flow
+    recent -> old_tokens [label="when full", style=dotted];
+    old_tokens -> conv1d;
+    conv1d -> compressed_tokens;
+    compressed_tokens -> compressed [label="append"];
+    
+    // Attention flow
+    compressed -> concatenate [label="long-term\ncontext"];
+    recent -> concatenate [label="recent\ncontext"];
+    concatenate -> attention;
+    attention -> output_node;
+    
+    // Note
+    note [label="Effective Context Window:\n512 (recent) + 2048 (compressed)\n= 2560 bytes history\nwith O(1) memory growth", shape=note, fillcolor="#FFFFDD"];
+}
+
+/* ============================================================================
+   Figure 5: Training Loop with Memory Management
+   ============================================================================ */
+
+digraph training_loop {
+    label="Training Loop with Compressive Memory Management";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    start [label="Start Epoch\ncompressed_memories = None", shape=ellipse, fillcolor="#E1FFE1"];
+    
+    load_batch [label="Load Batch\n32 × 512 bytes\nfrom DataLoader", fillcolor="#E1F5FF"];
+    
+    forward [label="Forward Pass\nlogits, memories = model(\n  batch,\n  compressed_memories\n)", fillcolor="#CCFFCC"];
+    
+    update_mem [label="Updated Memories\n8 layers × memory states\n[batch, mem_len, 512]", fillcolor="#FFFFCC"];
+    
+    loss [label="Compute Loss\nCross-Entropy\nBPD = -Σ log₂ p(x_i|x_{<i}) / N", fillcolor="#CCCCFF"];
+    
+    backward [label="Backward Pass\nloss.backward()\nCompute gradients", fillcolor="#FFCCCC"];
+    
+    clip [label="Gradient Clipping\nmax_norm=1.0", fillcolor="#FFDDCC"];
+    
+    optimize [label="Optimizer Step\nAdamW\nUpdate 14.8M params\nzero_grad()", fillcolor="#FFE1CC"];
+    
+    detach [label="★ DETACH MEMORIES ★\ncompressed_memories = [\n  m.detach() for m in memories\n]\nBreaks gradient flow\nPreserves activations", fillcolor="#FF9999", style="rounded,filled,bold", penwidth=3];
+    
+    check [label="More\nbatches?", shape=diamond, fillcolor="#FFFFEE"];
+    
+    end_epoch [label="End Epoch\nSave checkpoint", shape=ellipse, fillcolor="#FFE1E1"];
+    
+    // Main flow
+    start -> load_batch;
+    load_batch -> forward;
+    forward -> update_mem;
+    update_mem -> loss;
+    loss -> backward;
+    backward -> clip;
+    clip -> optimize;
+    optimize -> detach;
+    detach -> check;
+    check -> load_batch [label="Yes\n(memory\npersists)", fontcolor=darkgreen];
+    check -> end_epoch [label="No"];
+    
+    // Memory persistence annotation
+    mem_note [label="Critical:\nMemory state persists\nacross batches but\ngradients do not flow\nthrough history", shape=note, fillcolor="#FFFFDD"];
+}
+
+/* ============================================================================
+   Figure 6: Data Flow Through System
+   ============================================================================ */
+
+digraph data_flow {
+    label="Complete Data Flow: Training to Evaluation";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    // Data Source
+    subgraph cluster_data {
+        label="ATLAS Data";
+        style=filled;
+        fillcolor="#E1F5FF";
+        
+        raw_data [label="Raw Binary Files\nJet detector measurements\nFloat32, Int16, structured", fillcolor="#D0E8FF"];
+        train_data [label="Training: atlas_200m.bin\n200 MB", fillcolor="#C0DDFF"];
+        test_data [label="Test Sets:\natlas_10m/25m/50m/full", fillcolor="#C0DDFF"];
+    }
+    
+    // Preprocessing
+    preprocess [label="Preprocessing\nSliding windows: 512 bytes\nStride: 256 (training)\nNo normalization", fillcolor="#FFE1CC"];
+    
+    // DataLoader
+    dataloader [label="DataLoader\nBatch size: 32\nShuffle: True (train)\nNum workers: 2", fillcolor="#FFFFCC"];
+    
+    // Training
+    subgraph cluster_training {
+        label="Training Loop";
+        style=filled;
+        fillcolor="#EEFFEE";
+        
+        model_forward [label="Model Forward\n8-layer transformer\nCompressive attention", fillcolor="#CCFFCC"];
+        compute_loss [label="Loss & Metrics\nCross-entropy\nBPD computation", fillcolor="#BBFFBB"];
+        backprop [label="Backpropagation\nAdamW optimizer\nLR: 3e-4", fillcolor="#AAFFAA"];
+    }
+    
+    // Evaluation
+    subgraph cluster_eval {
+        label="Evaluation";
+        style=filled;
+        fillcolor="#EEEEFF";
+        
+        eval_model [label="Model Inference\nNo gradient computation\nMemory persistence", fillcolor="#CCCCFF"];
+        compute_bpd [label="Compute BPD\nOn test sets", fillcolor="#BBBBFF"];
+    }
+    
+    // Results
+    subgraph cluster_results {
+        label="Results";
+        style=filled;
+        fillcolor="#E1FFE1";
+        
+        results [label="Performance Metrics\natlas_10m: 3.044 BPD\natlas_25m: 3.043 BPD\natlas_50m: 3.042 BPD\natlas_full: 3.042 BPD", fillcolor="#CCFFCC"];
+        baseline [label="Baseline Comparison\nGzip: 5.02 BPD (39% worse)\nZstd: 4.98 BPD (39% worse)", fillcolor="#BBFFBB"];
+    }
+    
+    // Flow
+    raw_data -> train_data;
+    raw_data -> test_data;
+    train_data -> preprocess;
+    preprocess -> dataloader;
+    dataloader -> model_forward;
+    model_forward -> compute_loss;
+    compute_loss -> backprop;
+    backprop -> model_forward [label="50 epochs", style=dashed];
+    
+    test_data -> preprocess [style=dotted];
+    preprocess -> eval_model [style=dotted];
+    eval_model -> compute_bpd;
+    compute_bpd -> results;
+    results -> baseline;
+}
+
+/* ============================================================================
+   Figure 7: Parameters Breakdown
+   ============================================================================ */
+
+digraph parameters {
+    label="Model Parameters Distribution (14.8M total)";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    total [label="Vortex-Codec\n14,971,136 params\n(~14.8M)", fillcolor="#FFFFCC", style="rounded,filled,bold", penwidth=3];
+    
+    // Main components
+    embedding [label="Byte Embedding\n131,072 params\n(0.9%)", fillcolor="#FFE1E1"];
+    
+    transformers [label="8 Transformer Blocks\n14,708,736 params\n(98.2%)", fillcolor="#E1FFE1"];
+    
+    output_proj [label="Output Projection\n131,328 params\n(0.9%)", fillcolor="#E1E1FF"];
+    
+    total -> embedding;
+    total -> transformers;
+    total -> output_proj;
+    
+    // Per-layer breakdown
+    subgraph cluster_layer {
+        label="Per Transformer Block (1.84M params)";
+        style=filled;
+        fillcolor="#F5F5F5";
+        
+        attention_params [label="Multi-Head Attention\nQ, K, V projections: 786K\nOutput projection: 262K\nTotal: 1,048K", fillcolor="#FFCCCC"];
+        
+        memory_params [label="Memory Compression\nConv1D: 1,049K\nLayer norm: 0.5K\nTotal: 1,049K", fillcolor="#CCFFCC"];
+        
+        ffn_params [label="Feed-Forward Network\nLinear 512→2048: 1,049K\nLinear 2048→512: 1,049K\nTotal: 2,098K", fillcolor="#CCCCFF"];
+        
+        norms_params [label="Layer Norms\n2 × 512 = 1K", fillcolor="#FFFFCC"];
+    }
+    
+    transformers -> attention_params;
+    transformers -> memory_params;
+    transformers -> ffn_params;
+    transformers -> norms_params;
+    
+    // Memory footprint
+    memory_note [label="Memory Footprint:\nFP32: 59.9 MB\nFP16: 29.9 MB\nFP8: 14.9 MB", shape=note, fillcolor="#FFFFDD"];
+}
+
+/* ============================================================================
+   Figure 8: Performance Comparison
+   ============================================================================ */
+
+digraph performance {
+    label="Performance Comparison: Vortex-Codec vs Baselines";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    subgraph cluster_metrics {
+        label="Evaluation Metrics on ATLAS Data";
+        style=filled;
+        fillcolor="#F5F5F5";
+        
+        subgraph cluster_bpd {
+            label="Bits Per Byte (Lower is Better)";
+            fillcolor="#FFFFFF";
+            
+            gzip_bpd [label="Gzip\n5.02 BPD", fillcolor="#FFCCCC"];
+            zstd_bpd [label="Zstd\n4.98 BPD", fillcolor="#FFCCCC"];
+            vortex_bpd [label="Vortex\n3.04 BPD\n★ 39% better ★", fillcolor="#90EE90", penwidth=3];
+        }
+        
+        subgraph cluster_ratio {
+            label="Compression Factor (Higher is Better)";
+            fillcolor="#FFFFFF";
+            
+            gzip_ratio [label="Gzip\n1.59×", fillcolor="#FFCCCC"];
+            zstd_ratio [label="Zstd\n1.61×", fillcolor="#FFCCCC"];
+            vortex_ratio [label="Vortex\n2.63×\n★ 64% better ★", fillcolor="#90EE90", penwidth=3];
+        }
+        
+        subgraph cluster_speed {
+            label="Throughput MB/s (Higher is Better)";
+            fillcolor="#FFFFFF";
+            
+            gzip_speed [label="Gzip\n61.2 MB/s", fillcolor="#90EE90"];
+            zstd_speed [label="Zstd\n364.5 MB/s", fillcolor="#90EE90"];
+            vortex_speed [label="Vortex\n0.065 MB/s\n(Trade-off)", fillcolor="#FFB6C1"];
+        }
+    }
+    
+    tradeoff [label="Trade-off Analysis:\n39% better compression\n900-5600× slower speed\n\nIdeal for:\n• Archival storage\n• One-time compression\n• GPU-available environments\n• Space > Time priority", shape=note, fillcolor="#FFFFEE"];
+}
+
+/* ============================================================================
+   Figure 9: Ablation Study Results
+   ============================================================================ */
+
+digraph ablation {
+    label="Ablation Study: Component Importance";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    full_model [label="Full Model\n3.042 BPD\n14.8M params\n★ Baseline ★", fillcolor="#90EE90", style="rounded,filled,bold", penwidth=3];
+    
+    question [label="Remove Component?", shape=diamond, fillcolor="#FFFFEE"];
+    
+    // Ablation variants
+    no_compression [label="No Compression\n(Standard Transformer)\n3.189 BPD (+0.147)\n5% degradation", fillcolor="#FFFFCC"];
+    
+    no_memory [label="No Memory\n(Fixed context only)\n3.584 BPD (+0.542)\n18% degradation\n★ Worst ★", fillcolor="#FFB6C1", penwidth=2];
+    
+    four_layers [label="4 Layers\n(Shallow network)\n3.267 BPD (+0.225)\n7.4% degradation\n7.8M params", fillcolor="#FFFFCC"];
+    
+    four_heads [label="4 Heads\n(Reduced attention)\n3.178 BPD (+0.136)\n4.5% degradation\n13.9M params", fillcolor="#FFFFEE"];
+    
+    d256 [label="d_model=256\n(Smaller dimension)\n3.412 BPD (+0.370)\n12% degradation\n4.2M params", fillcolor="#FFE1CC"];
+    
+    window256 [label="Window=256\n(Smaller context)\n3.198 BPD (+0.156)\n5.1% degradation\n14.8M params", fillcolor="#FFFFEE"];
+    
+    full_model -> question;
+    question -> no_compression [label="Remove\ncompression"];
+    question -> no_memory [label="Remove\nmemory"];
+    question -> four_layers [label="Reduce to\n4 layers"];
+    question -> four_heads [label="Reduce to\n4 heads"];
+    question -> d256 [label="Reduce\nd_model"];
+    question -> window256 [label="Reduce\nwindow"];
+    
+    conclusions [label="Key Findings:\n• Long-range memory critical (18% impact)\n• Compression mechanism important (5%)\n• All components contribute\n• Architecture well-tuned", shape=note, fillcolor="#E1FFE1"];
+}
+
+/* ============================================================================
+   Figure 10: Arithmetic Coding Process
+   ============================================================================ */
+
+digraph arithmetic_coding {
+    label="Arithmetic Coding: Probability to Bits";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    logits [label="Model Output\nLogits [batch, 512, 256]\nRaw scores", fillcolor="#E1F5FF"];
+    
+    softmax [label="Softmax\nConvert to probabilities\nΣ p(x) = 1", fillcolor="#CCCCFF"];
+    
+    example [label="Example for byte 147:\np(147 | context) = 0.089", shape=note, fillcolor="#FFFFEE"];
+    
+    cdf [label="Cumulative Distribution\nCDF[i] = Σ(j=0 to i) p(j)\nCDF[147] = 0.412\nCDF[148] = 0.501", fillcolor="#CCFFCC"];
+    
+    interval [label="Interval Encoding\nByte 147 → [0.412, 0.501)\nInterval width = 0.089", fillcolor="#FFFFCC"];
+    
+    bits [label="Bits Required\n-log₂(0.089) ≈ 3.49 bits\nvs 8 bits (fixed)\nSavings: 4.51 bits!", fillcolor="#90EE90"];
+    
+    torchac [label="torchac Library\nRange coding implementation\n16-bit precision\nNear-optimal encoding", fillcolor="#FFE1CC"];
+    
+    bitstream [label="Compressed Bitstream\nAverage: 3.04 bits/byte\nTheoretical: 2.63× compression", fillcolor="#E1FFE1", penwidth=3];
+    
+    logits -> softmax;
+    softmax -> example [style=dotted];
+    softmax -> cdf;
+    cdf -> interval;
+    interval -> bits;
+    bits -> torchac;
+    torchac -> bitstream;
+    
+    theory [label="Shannon's Theorem:\nOptimal bits = -log₂ p(x)\nArithmetic coding achieves\nnear-optimal compression\nwith < 2 bits overhead", shape=note, fillcolor="#FFFFDD"];
+}

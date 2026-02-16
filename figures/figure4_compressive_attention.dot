@@ -1,0 +1,48 @@
+digraph compressive_attention {
+    label="Compressive Attention Memory Mechanism";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    subgraph cluster_memory {
+        label="Memory Buffers";
+        style=filled;
+        fillcolor="#F5F5F5";
+        
+        compressed [label="Compressed Memory\nUp to 512 tokens\n(represents 2048 original)\n4:1 compression", fillcolor="#FFE1E1"];
+        recent [label="Recent Memory\n512 tokens\nFull resolution", fillcolor="#E1FFE1"];
+    }
+    
+    subgraph cluster_compress {
+        label="Compression Process";
+        style=filled;
+        fillcolor="#FFF8E1";
+        
+        old_tokens [label="Oldest 128 tokens\nfrom Recent Memory", fillcolor="#FFFFCC"];
+        conv1d [label="Conv1D Layer\nkernel_size=4\nstride=4\n512 in → 512 out", fillcolor="#FFE0B0"];
+        compressed_tokens [label="32 compressed tokens\n(4:1 ratio)", fillcolor="#FFCC99"];
+    }
+    
+    concatenate [label="Concatenate\nCompressed + Recent\nTotal context: up to 2560", fillcolor="#D0E0FF"];
+    
+    attention [label="Multi-Head Attention\n8 heads, d_k=64\nScaled dot-product\n+ Causal mask", fillcolor="#C0D0FF"];
+    
+    output_node [label="Attention Output\nContext-aware\nrepresentations", fillcolor="#E1FFE1"];
+    
+    // Compression flow
+    recent -> old_tokens [label="when full", style=dotted];
+    old_tokens -> conv1d;
+    conv1d -> compressed_tokens;
+    compressed_tokens -> compressed [label="append"];
+    
+    // Attention flow
+    compressed -> concatenate [label="long-term\ncontext"];
+    recent -> concatenate [label="recent\ncontext"];
+    concatenate -> attention;
+    attention -> output_node;
+    
+    // Note
+    note [label="Effective Context Window:\n512 (recent) + 2048 (compressed)\n= 2560 bytes history\nwith O(1) memory growth", shape=note, fillcolor="#FFFFDD"];
+}

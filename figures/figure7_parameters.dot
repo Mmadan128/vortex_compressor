@@ -1,0 +1,44 @@
+digraph parameters {
+    label="Model Parameters Distribution (14.8M total)";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    total [label="Vortex-Codec\n14,971,136 params\n(~14.8M)", fillcolor="#FFFFCC", style="rounded,filled,bold", penwidth=3];
+    
+    // Main components
+    embedding [label="Byte Embedding\n131,072 params\n(0.9%)", fillcolor="#FFE1E1"];
+    
+    transformers [label="8 Transformer Blocks\n14,708,736 params\n(98.2%)", fillcolor="#E1FFE1"];
+    
+    output_proj [label="Output Projection\n131,328 params\n(0.9%)", fillcolor="#E1E1FF"];
+    
+    total -> embedding;
+    total -> transformers;
+    total -> output_proj;
+    
+    // Per-layer breakdown
+    subgraph cluster_layer {
+        label="Per Transformer Block (1.84M params)";
+        style=filled;
+        fillcolor="#F5F5F5";
+        
+        attention_params [label="Multi-Head Attention\nQ, K, V projections: 786K\nOutput projection: 262K\nTotal: 1,048K", fillcolor="#FFCCCC"];
+        
+        memory_params [label="Memory Compression\nConv1D: 1,049K\nLayer norm: 0.5K\nTotal: 1,049K", fillcolor="#CCFFCC"];
+        
+        ffn_params [label="Feed-Forward Network\nLinear 512→2048: 1,049K\nLinear 2048→512: 1,049K\nTotal: 2,098K", fillcolor="#CCCCFF"];
+        
+        norms_params [label="Layer Norms\n2 × 512 = 1K", fillcolor="#FFFFCC"];
+    }
+    
+    transformers -> attention_params;
+    transformers -> memory_params;
+    transformers -> ffn_params;
+    transformers -> norms_params;
+    
+    // Memory footprint
+    memory_note [label="Memory Footprint:\nFP32: 59.9 MB\nFP16: 29.9 MB\nFP8: 14.9 MB", shape=note, fillcolor="#FFFFDD"];
+}

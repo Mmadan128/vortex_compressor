@@ -1,0 +1,34 @@
+digraph arithmetic_coding {
+    label="Arithmetic Coding: Probability to Bits";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    logits [label="Model Output\nLogits [batch, 512, 256]\nRaw scores", fillcolor="#E1F5FF"];
+    
+    softmax [label="Softmax\nConvert to probabilities\nΣ p(x) = 1", fillcolor="#CCCCFF"];
+    
+    example [label="Example for byte 147:\np(147 | context) = 0.089", shape=note, fillcolor="#FFFFEE"];
+    
+    cdf [label="Cumulative Distribution\nCDF[i] = Σ(j=0 to i) p(j)\nCDF[147] = 0.412\nCDF[148] = 0.501", fillcolor="#CCFFCC"];
+    
+    interval [label="Interval Encoding\nByte 147 → [0.412, 0.501)\nInterval width = 0.089", fillcolor="#FFFFCC"];
+    
+    bits [label="Bits Required\n-log₂(0.089) ≈ 3.49 bits\nvs 8 bits (fixed)\nSavings: 4.51 bits!", fillcolor="#90EE90"];
+    
+    torchac [label="torchac Library\nRange coding implementation\n16-bit precision\nNear-optimal encoding", fillcolor="#FFE1CC"];
+    
+    bitstream [label="Compressed Bitstream\nAverage: 3.04 bits/byte\nTheoretical: 2.63× compression", fillcolor="#E1FFE1", penwidth=3];
+    
+    logits -> softmax;
+    softmax -> example [style=dotted];
+    softmax -> cdf;
+    cdf -> interval;
+    interval -> bits;
+    bits -> torchac;
+    torchac -> bitstream;
+    
+    theory [label="Shannon's Theorem:\nOptimal bits = -log₂ p(x)\nArithmetic coding achieves\nnear-optimal compression\nwith < 2 bits overhead", shape=note, fillcolor="#FFFFDD"];
+}

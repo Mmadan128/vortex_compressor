@@ -1,0 +1,28 @@
+{
+  "gzip": {
+    "name": "Gzip (level 6)",
+    "original_size": 5862892,
+    "compressed_size": 5365231,
+    "ratio": 0.9151168058357548,
+    "factor": 1.0927566772055108,
+    "savings_pct": 8.488319416424517,
+    "bpd": 7.320934446686039,
+    "compress_time": 0.4691779613494873,
+    "decompress_time": 0.07480978965759277,
+    "compress_mbps": 11.917204090706981,
+    "decompress_mbps": 74.74007808142777
+  },
+  "zstd": {
+    "name": "Zstd (level 3)",
+    "original_size": 5862892,
+    "compressed_size": 5351253,
+    "ratio": 0.9127326582171392,
+    "factor": 1.095611065296296,
+    "savings_pct": 8.726734178286078,
+    "bpd": 7.301861265737114,
+    "compress_time": 0.051779747009277344,
+    "decompress_time": 0.013043880462646484,
+    "compress_mbps": 107.98217147066948,
+    "decompress_mbps": 428.6523121915555
+  }
+}

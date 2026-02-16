@@ -1,0 +1,73 @@
+digraph transformer_block {
+    label="Single Compressive Transformer Block (1.84M params)";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    input [label="Input\n[batch, 512, 512]", fillcolor="#E1F5FF"];
+    
+    // Pre-norm
+    ln1 [label="Layer Norm 1\n1,024 params", fillcolor="#FFE1CC"];
+    
+    // Attention
+    subgraph cluster_attention {
+        label="Compressive Multi-Head Attention";
+        style=filled;
+        fillcolor="#FFEEBB";
+        
+        mem_comp [label="Compressed Memory\nOld activations\n4:1 compressed", fillcolor="#FFE1E1"];
+        mem_recent [label="Recent Memory\nLast 512 tokens\nFull resolution", fillcolor="#E1FFE1"];
+        concat [label="Concatenate\nMemories", fillcolor="#FFFFCC"];
+        qkv [label="Q, K, V Projections\n8 heads, d_k=64\n786,432 params", fillcolor="#FFD0CC"];
+        attn [label="Scaled Dot-Product\nAttention\n+ Causal Mask", fillcolor="#FFCCAA"];
+        out_proj [label="Output Projection\n262,144 params", fillcolor="#FFD0CC"];
+        
+        mem_comp -> concat;
+        mem_recent -> concat;
+        concat -> qkv;
+        qkv -> attn;
+        attn -> out_proj;
+    }
+    
+    // First residual
+    residual1 [label="Residual Connection\n+ Dropout", fillcolor="#D0FFD0"];
+    
+    // Second norm
+    ln2 [label="Layer Norm 2\n1,024 params", fillcolor="#FFE1CC"];
+    
+    // Feed-forward
+    subgraph cluster_ffn {
+        label="Feed-Forward Network";
+        style=filled;
+        fillcolor="#CCDDFF";
+        
+        linear1 [label="Linear 512→2048\n+ GELU\n+ Dropout\n1,048,576 params", fillcolor="#CCCCFF"];
+        linear2 [label="Linear 2048→512\n+ Dropout\n1,048,576 params", fillcolor="#CCCCFF"];
+        
+        linear1 -> linear2;
+    }
+    
+    // Second residual
+    residual2 [label="Residual Connection\n+ Dropout", fillcolor="#D0FFD0"];
+    
+    output [label="Output\n[batch, 512, 512]", fillcolor="#E1FFE1"];
+    
+    // Memory compression
+    compress_layer [label="Memory Compression\nConv1D (stride=4)\n1,049,088 params", fillcolor="#FFFFEE", style="dashed"];
+    
+    // Flow
+    input -> ln1;
+    ln1 -> qkv [lhead=cluster_attention];
+    out_proj -> residual1 [ltail=cluster_attention];
+    input -> residual1 [style=dashed, color=blue, label="  residual"];
+    residual1 -> ln2;
+    ln2 -> linear1 [lhead=cluster_ffn];
+    linear2 -> residual2 [ltail=cluster_ffn];
+    residual1 -> residual2 [style=dashed, color=blue, label="  residual"];
+    residual2 -> output;
+    
+    mem_recent -> compress_layer [label="when full", style=dotted];
+    compress_layer -> mem_comp [label="compressed", style=dotted];
+}

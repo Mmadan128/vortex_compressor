@@ -68,6 +68,4 @@ htmlcov/
 tmp/
 temp/
 *.tmp
-
-COMPRESSIVE_TRANSFORMERS_GUIDE.md
-QUICK_REFERENCE.py
+*.md

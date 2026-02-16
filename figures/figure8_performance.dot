@@ -1,0 +1,43 @@
+digraph performance {
+    label="Performance Comparison: Vortex-Codec vs Baselines";
+    labelloc="t";
+    fontsize=16;
+    fontname="Arial";
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    
+    subgraph cluster_metrics {
+        label="Evaluation Metrics on ATLAS Data";
+        style=filled;
+        fillcolor="#F5F5F5";
+        
+        subgraph cluster_bpd {
+            label="Bits Per Byte (Lower is Better)";
+            fillcolor="#FFFFFF";
+            
+            gzip_bpd [label="Gzip\n5.02 BPD", fillcolor="#FFCCCC"];
+            zstd_bpd [label="Zstd\n4.98 BPD", fillcolor="#FFCCCC"];
+            vortex_bpd [label="Vortex\n3.04 BPD\n★ 39% better ★", fillcolor="#90EE90", penwidth=3];
+        }
+        
+        subgraph cluster_ratio {
+            label="Compression Factor (Higher is Better)";
+            fillcolor="#FFFFFF";
+            
+            gzip_ratio [label="Gzip\n1.59×", fillcolor="#FFCCCC"];
+            zstd_ratio [label="Zstd\n1.61×", fillcolor="#FFCCCC"];
+            vortex_ratio [label="Vortex\n2.63×\n★ 64% better ★", fillcolor="#90EE90", penwidth=3];
+        }
+        
+        subgraph cluster_speed {
+            label="Throughput MB/s (Higher is Better)";
+            fillcolor="#FFFFFF";
+            
+            gzip_speed [label="Gzip\n61.2 MB/s", fillcolor="#90EE90"];
+            zstd_speed [label="Zstd\n364.5 MB/s", fillcolor="#90EE90"];
+            vortex_speed [label="Vortex\n0.065 MB/s\n(Trade-off)", fillcolor="#FFB6C1"];
+        }
+    }
+    
+    tradeoff [label="Trade-off Analysis:\n39% better compression\n900-5600× slower speed\n\nIdeal for:\n• Archival storage\n• One-time compression\n• GPU-available environments\n• Space > Time priority", shape=note, fillcolor="#FFFFEE"];
+}

@@ -88,7 +88,7 @@ def benchmark_zstd(data: bytes, level: int = 3) -> dict:
 
 def evaluate_model_bpd(model, data_path: str, device, max_bytes: int = None):
     """Evaluate model BPD on test data."""
-    print("\nEvaluating model on test data...")
+    print("\nEvaluating model on real ATLAS test data...")
     
     dataset = ByteDataset(
         file_path=data_path,
@@ -179,30 +179,44 @@ def run_benchmark(args):
         
         print(f"Loading model from {args.model}...")
         
-        if args.config:
+        # Load checkpoint first to check if it contains config
+        checkpoint = torch.load(args.model, map_location=device)
+        
+        # Try to get config from: 1) checkpoint, 2) config file, 3) default
+        if 'config' in checkpoint:
+            config = checkpoint['config']
+            print(f"  Using config from checkpoint")
+        elif args.config:
             with open(args.config) as f:
                 config = yaml.safe_load(f)
+            print(f"  Using config from {args.config}")
         else:
             config = {
                 'model': {'d_model': 256, 'n_layers': 6, 'n_heads': 8, 'd_ff': 1024, 
                          'dropout': 0.1, 'vocab_size': 256},
                 'compressive_memory': {'window_size': 512, 'compression_rate': 4}
             }
+            print(f"  Using default config")
+        
+        # Display model architecture
+        print(f"  Architecture: d_model={config['model']['d_model']}, "
+              f"n_layers={config['model']['n_layers']}, "
+              f"n_heads={config['model']['n_heads']}, "
+              f"d_ff={config['model']['d_ff']}")
         
         model = VortexCodec(
             **config['model'],
             **config['compressive_memory']
         ).to(device)
         
-        if args.model.endswith('.pt'):
-            checkpoint = torch.load(args.model, map_location=device)
-            if 'model_state_dict' in checkpoint:
-                model.load_state_dict(checkpoint['model_state_dict'])
-                print(f"  Loaded from checkpoint (epoch {checkpoint.get('epoch', '?')})")
-                if 'val_bpd' in checkpoint:
-                    print(f"  Checkpoint validation BPD: {checkpoint['val_bpd']:.4f}")
-            else:
-                model.load_state_dict(checkpoint)
+        # Load weights
+        if 'model_state_dict' in checkpoint:
+            model.load_state_dict(checkpoint['model_state_dict'])
+            print(f"  Loaded from checkpoint (epoch {checkpoint.get('epoch', '?')})")
+            if 'val_bpd' in checkpoint:
+                print(f"  Checkpoint validation BPD: {checkpoint['val_bpd']:.4f}")
+        else:
+            model.load_state_dict(checkpoint)
         
         model_bpd = evaluate_model_bpd(
             model, 
@@ -253,11 +267,11 @@ def run_benchmark(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate and benchmark Vortex-Codec")
+    parser = argparse.ArgumentParser(description="Evaluate and benchmark Vortex-Codec on real ATLAS data")
     parser.add_argument('--data', type=str, required=True,
-                       help='Path to test data file')
+                       help='Path to ATLAS test data file (e.g., experiments/atlas_experiment/atlas_50m.bin)')
     parser.add_argument('--model', type=str, default=None,
-                       help='Path to trained model checkpoint')
+                       help='Path to trained model checkpoint (e.g., D:\\best_model.pt or checkpoints/atlas_20epochs/best_model.pt)')
     parser.add_argument('--config', type=str, default=None,
                        help='Path to model config (if not in checkpoint)')
     parser.add_argument('--max-bytes', type=int, default=None,

@@ -1,0 +1,35 @@
+{
+  "gzip": {
+    "name": "Gzip (level 6)",
+    "original_size": 100000000,
+    "compressed_size": 62718262,
+    "ratio": 0.62718262,
+    "factor": 1.5944319375431673,
+    "savings_pct": 37.281738,
+    "bpd": 5.01746096,
+    "compress_time": 1.9850366115570068,
+    "decompress_time": 0.402921199798584,
+    "compress_mbps": 48.04316005326545,
+    "decompress_mbps": 236.6900319176508
+  },
+  "zstd": {
+    "name": "Zstd (level 3)",
+    "original_size": 100000000,
+    "compressed_size": 62256910,
+    "ratio": 0.6225691,
+    "factor": 1.6062474028987304,
+    "savings_pct": 37.74309,
+    "bpd": 4.9805528,
+    "compress_time": 0.31710386276245117,
+    "decompress_time": 0.07476210594177246,
+    "compress_mbps": 300.74509597527873,
+    "decompress_mbps": 1275.6118950809216
+  },
+  "vortex": {
+    "name": "Vortex-Codec (Neural)",
+    "model_bpd": 3.0422435964248566,
+    "theoretical_ratio": 0.3802804495531071,
+    "theoretical_factor": 2.629638208262262,
+    "note": "BPD only (actual compression requires arithmetic coding)"
+  }
+}
