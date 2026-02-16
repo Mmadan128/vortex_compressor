@@ -11,7 +11,7 @@ import inspect
 try:
     import torch
     from vortex.core import VortexCodec
-    from vortex.utils import optimize_for_inference
+    from vortex.utils import optimize_for_inference, quantize_dynamic_int8
 except ImportError as e:
     print(f"Error: Required packages not installed: {e}")
     print("Install with: pip install -r requirements.txt")
@@ -183,6 +183,12 @@ Examples:
         help="Use torch.compile for 2-3x speedup (requires PyTorch 2.0+)"
     )
     parser.add_argument(
+        "--quantize",
+        action="store_true",
+        default=False,
+        help="Use INT8 quantization for 2-4x speedup (minimal quality loss)"
+    )
+    parser.add_argument(
         "--profile",
         action="store_true",
         default=False,
@@ -215,9 +221,10 @@ Examples:
     print(f"Device:           {device}")
     print(f"Chunk size:       {args.chunk_size}")
     print(f"Batch size:       {args.batch_size}")
-    print(f"Flash Attention:  Enabled (NEW!)")
-    print(f"Mixed precision:  {not args.no_mixed_precision}")
-    print(f"Torch compile:    {args.compile}")
+    print(f"Flash Attention:  {'Enabled' if not args.quantize else 'N/A (quantized)'}")
+    print(f"Mixed precision:  {not args.no_mixed_precision and not args.quantize}")
+    print(f"Torch compile:    {args.compile and not args.quantize}")
+    print(f"INT8 Quantization: {args.quantize}")
     print(f"Profiling:        {args.profile}")
     
     # Show GPU info if available
@@ -265,23 +272,33 @@ Examples:
     # Set model to eval mode
     codec.eval()
     
+    # Apply INT8 quantization if requested (do this BEFORE other optimizations)
+    if args.quantize:
+        print("  Applying INT8 quantization...")
+        codec = quantize_dynamic_int8(codec)
+        # Quantized models run on CPU by default
+        device = torch.device('cpu')
+        print("  ℹ Quantized model runs on CPU")
+    
     # Check if Flash Attention is active
     try:
-        attn = codec.transformer_blocks[0].attention
-        if hasattr(attn, '_flash_available') and attn._flash_available:
+        attn = codec.transformer_blocks[0].attention if hasattr(codec, 'transformer_blocks') else None
+        if attn and hasattr(attn, '_flash_available') and attn._flash_available:
             print("  ✓ Flash Attention 3 is ACTIVE! (35-50% faster)")
         else:
-            print("  ℹ Flash Attention not available, using standard attention")
+            if not args.quantize:  # Flash attention not available with quantization
+                print("  ℹ Flash Attention not available, using standard attention")
     except:
         pass
     
-    # Enable optimizations using new utility
-    use_mixed_precision = (not args.no_mixed_precision) and (device.type == 'cuda')
+    # Enable optimizations using new utility (skip if quantized)
+    use_mixed_precision = (not args.no_mixed_precision) and (device.type == 'cuda') and (not args.quantize)
+    use_compile = args.compile and (not args.quantize)  # Can't compile quantized models easily
     
-    if use_mixed_precision or args.compile:
+    if use_mixed_precision or use_compile:
         print("  Applying optimizations...")
         opt_dtype = torch.bfloat16 if use_mixed_precision else None
-        opt_compile = 'reduce-overhead' if args.compile else None
+        opt_compile = 'reduce-overhead' if use_compile else None
         
         codec = optimize_for_inference(
             codec,
@@ -289,11 +306,11 @@ Examples:
             compile_mode=opt_compile
         )
         
-        if args.compile:
+        if use_compile:
             print("  ✓ torch.compile() applied (10-30% faster)")
     
-    # Additional CUDA optimizations
-    if device.type == 'cuda':
+    # Additional CUDA optimizations (skip if quantized/CPU)
+    if device.type == 'cuda' and not args.quantize:
         torch.backends.cudnn.benchmark = True
         torch.set_float32_matmul_precision('high')
         print("  ✓ CUDA optimizations enabled")

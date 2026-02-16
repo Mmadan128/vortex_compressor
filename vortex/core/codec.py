@@ -30,20 +30,6 @@ try:
 except ImportError:
     AUTOREGRESSIVE_CODER_AVAILABLE = False
 
-# GPU Range Coder (much faster than CPU torchac)
-try:
-    from vortex.cuda.range_coder import GPURangeCoder
-    GPU_RANGE_CODER_AVAILABLE = True
-except ImportError:
-    GPU_RANGE_CODER_AVAILABLE = False
-
-# GPU Range Coder (much faster than CPU torchac)
-try:
-    from vortex.cuda.range_coder import GPURangeCoder
-    GPU_RANGE_CODER_AVAILABLE = True
-except ImportError:
-    GPU_RANGE_CODER_AVAILABLE = False
-
 
 from vortex.modules.compressive import CompressiveTransformerBlock
 
@@ -120,14 +106,6 @@ class VortexCodec(nn.Module):
         
         self.output_projection = nn.Linear(d_model, vocab_size)
         self.dropout = nn.Dropout(dropout)
-        
-        # Initialize GPU range coder if available (10-100× faster than CPU)
-        if GPU_RANGE_CODER_AVAILABLE:
-            self.gpu_range_coder = GPURangeCoder(precision_bits=16)
-            self.use_gpu_range_coder = True
-        else:
-            self.gpu_range_coder = None
-            self.use_gpu_range_coder = False
     
     def forward(
         self,
@@ -230,13 +208,11 @@ class VortexCodec(nn.Module):
             Compressed byte string (header + compressed chunks)
             
         Raises:
-            RuntimeError: If no compression backend is available
+            RuntimeError: If torchac is not available
         """
-        if not TORCHAC_AVAILABLE and not GPU_RANGE_CODER_AVAILABLE:
+        if not TORCHAC_AVAILABLE:
             raise RuntimeError(
-                "No compression backend available. Install torchac or compile GPU kernels:\n"
-                "  - CPU (slower): pip install torchac\n"
-                "  - GPU (faster): python setup_cuda_kernels.py install"
+                "torchac is required for compression. Install with: pip install torchac"
             )
         
         self.eval()
@@ -283,30 +259,16 @@ class VortexCodec(nn.Module):
                 # Encode bytes [1:] using CDFs from positions [:-1]
                 # This means we predict byte i+1 from context up to byte i
                 probs = F.softmax(logits, dim=-1)
+                cdfs = self._probabilities_to_cdf(probs[:, :-1])
                 
                 targets = chunk_data[:, 1:]
                 
-                # Use GPU range coder if available, otherwise fall back to torchac
                 try:
-                    if self.use_gpu_range_coder and device.type in ['cuda', 'hip']:
-                        # GPU range coding (10-100× faster)
-                        # Flatten for encoding: [batch*seq_len, vocab_size]
-                        probs_flat = probs[:, :-1].reshape(-1, self.vocab_size)
-                        targets_flat = targets.reshape(-1)
-                        
-                        compressed_chunk = self.gpu_range_coder.encode(
-                            targets_flat,
-                            probs_flat,
-                            device
-                        )
-                    else:
-                        # CPU arithmetic coding (fallback)
-                        cdfs = self._probabilities_to_cdf(probs[:, :-1])
-                        compressed_chunk = torchac.encode_float_cdf(
-                            cdfs.cpu(),
-                            targets.cpu().to(torch.int16),
-                            check_input_bounds=True
-                        )
+                    compressed_chunk = torchac.encode_float_cdf(
+                        cdfs.cpu(),
+                        targets.cpu().to(torch.int16),
+                        check_input_bounds=True
+                    )
                 except Exception as e:
                     raise RuntimeError(f"Compression failed at chunk {chunk_idx}: {e}")
             else:
@@ -608,40 +570,21 @@ class VortexCodec(nn.Module):
         # Forward pass to get CDFs for all positions
         logits, _ = self.forward(full_context, compressed_memories=compressed_memories)
         
-        # Get probabilities for positions [:-1] to decode positions [1:]
+        # Get CDFs for positions [:-1] to decode positions [1:]
         probs = F.softmax(logits[:, :-1, :], dim=-1)
+        cdfs = self._probabilities_to_cdf(probs)  # [1, seq_len-1, vocab_size+1]
         
-        # Decode the remaining bytes
-        encoded_stream = compressed_chunk[1:]  # Skip first byte
+        # Decode the remaining bytes using torchac
+        torchac_stream = compressed_chunk[1:]  # Skip first byte
         
-        if len(encoded_stream) > 0:
-            device = next(self.parameters()).device
-            
+        if len(torchac_stream) > 0:
             try:
-                if self.use_gpu_range_coder and device.type in ['cuda', 'hip']:
-                    # GPU range decoding (10-100× faster)
-                    # Flatten probabilities for decoding
-                    probs_flat = probs.reshape(-1, self.vocab_size)
-                    
-                    # Create CDF for GPU decoder
-                    cdfs = self._probabilities_to_cdf(probs_flat.unsqueeze(0)).squeeze(0)
-                    
-                    decoded_symbols = self.gpu_range_coder.decode(
-                        encoded_stream,
-                        cdfs,
-                        length=probs_flat.size(0),
-                        device=device
-                    )
-                    decoded_bytes.extend(decoded_symbols.cpu().tolist())
-                else:
-                    # CPU arithmetic decoding (fallback)
-                    import torchac
-                    cdfs = self._probabilities_to_cdf(probs)  # [1, seq_len-1, vocab_size+1]
-                    decoded_symbols = torchac.decode_float_cdf(
-                        cdfs.cpu(),
-                        encoded_stream
-                    )
-                    decoded_bytes.extend(decoded_symbols.squeeze(0).tolist())
+                import torchac
+                decoded_symbols = torchac.decode_float_cdf(
+                    cdfs.cpu(),
+                    torchac_stream
+                )
+                decoded_bytes.extend(decoded_symbols.squeeze(0).tolist())
             except Exception as e:
                 raise RuntimeError(
                     f"Failed to decode chunk: {e}. "
